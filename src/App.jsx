@@ -5,6 +5,7 @@ import AppLayout from './components/AppLayout'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
+import Products from './pages/Products'
 
 function PublicRoute({ children }) {
   const { session, loading } = useAuth()
@@ -23,6 +24,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AppLayout><Dashboard /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/products"
+        element={
+          <ProtectedRoute>
+            <AppLayout><Products /></AppLayout>
           </ProtectedRoute>
         }
       />
