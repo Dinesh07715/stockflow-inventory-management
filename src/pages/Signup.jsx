@@ -67,9 +67,10 @@ export default function Signup() {
       return
     }
 
+    const organizationId = crypto.randomUUID()
     const { error: orgError } = await supabase
       .from('organizations')
-      .insert({ name: orgName.trim() })
+      .insert({ id: organizationId, name: orgName.trim() })
 
     if (orgError) {
       setError('Account created, but we could not create your organization. Please contact support.')
@@ -77,23 +78,9 @@ export default function Signup() {
       return
     }
 
-    const { data: orgData, error: orgFetchError } = await supabase
-      .from('organizations')
-      .select('id')
-      .eq('name', orgName.trim())
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (orgFetchError || !orgData) {
-      setError('Organization created, but we could not link your profile. Please contact support.')
-      setLoading(false)
-      return
-    }
-
     const { error: profileError } = await supabase
       .from('profiles')
-      .insert({ id: userId, organization_id: orgData.id })
+      .insert({ id: userId, organization_id: organizationId })
 
     if (profileError) {
       setError('Organization created, but we could not link your profile. Please contact support.')
