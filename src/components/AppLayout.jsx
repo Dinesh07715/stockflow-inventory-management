@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Boxes, LayoutDashboard, LogOut, Menu, Package } from 'lucide-react'
+import { Boxes, LayoutDashboard, LogOut, Menu, Package, Settings } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/products', label: 'Products', icon: Package },
+  { to: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export default function AppLayout({ children }) {

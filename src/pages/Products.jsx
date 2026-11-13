@@ -23,6 +23,8 @@ const emptyForm = {
   low_stock_threshold: '',
 }
 
+const DEFAULT_LOW_STOCK_THRESHOLD = 5
+
 function getProductError(error) {
   if (error.code === '23505') {
     return 'A product with this SKU already exists in your organization.'
@@ -108,6 +110,7 @@ function getFormValues(product) {
 export default function Products() {
   const { user } = useAuth()
   const [organizationId, setOrganizationId] = useState(null)
+  const [defaultThreshold, setDefaultThreshold] = useState(DEFAULT_LOW_STOCK_THRESHOLD)
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -128,6 +131,7 @@ export default function Products() {
       setLoadError('')
       setOrganizationId(null)
       setProducts([])
+      setDefaultThreshold(DEFAULT_LOW_STOCK_THRESHOLD)
 
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -148,18 +152,34 @@ export default function Products() {
       }
 
       setOrganizationId(profile.organization_id)
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('organization_id', profile.organization_id)
-        .order('created_at', { ascending: false })
+      const [settingsResult, productsResult] = await Promise.all([
+        supabase
+          .from('organization_settings')
+          .select('default_low_stock_threshold')
+          .eq('organization_id', profile.organization_id)
+          .maybeSingle(),
+        supabase
+          .from('products')
+          .select('*')
+          .eq('organization_id', profile.organization_id)
+          .order('created_at', { ascending: false }),
+      ])
 
       if (!active) return
-      if (error) {
-        setLoadError(`Unable to load products: ${error.message}`)
+      const errors = []
+      if (settingsResult.error) {
+        errors.push(`Unable to load inventory settings: ${settingsResult.error.message}`)
       } else {
-        setProducts(data ?? [])
+        setDefaultThreshold(
+          settingsResult.data?.default_low_stock_threshold ?? DEFAULT_LOW_STOCK_THRESHOLD
+        )
       }
+      if (productsResult.error) {
+        errors.push(`Unable to load products: ${productsResult.error.message}`)
+      } else {
+        setProducts(productsResult.data ?? [])
+      }
+      if (errors.length > 0) setLoadError(errors.join(' '))
       setLoading(false)
     }
 
@@ -366,7 +386,7 @@ export default function Products() {
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {filteredProducts.map((product) => {
-                  const threshold = product.low_stock_threshold ?? 5
+                  const threshold = product.low_stock_threshold ?? defaultThreshold
                   const isLowStock = product.quantity_on_hand <= threshold
                   return (
                     <tr key={product.id} className="hover:bg-neutral-50">
@@ -497,7 +517,10 @@ export default function Products() {
                     className={inputClass}
                   />
                 </ProductField>
-                <ProductField label="Low stock threshold" help="Leave empty to use 5">
+                <ProductField
+                  label="Low stock threshold"
+                  help={`Leave empty to use organization default (${defaultThreshold})`}
+                >
                   <input
                     type="number"
                     min="0"

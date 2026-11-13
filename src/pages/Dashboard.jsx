@@ -17,6 +17,7 @@ const emptyInventory = {
   totalProducts: 0,
   totalStockQuantity: 0,
   lowStockItems: [],
+  defaultThreshold: 5,
 }
 
 export default function Dashboard() {
@@ -65,19 +66,31 @@ export default function Dashboard() {
         setProfile(profileData)
         setOrg(profileData.organizations)
 
-        const { data: products, error: productsError } = await supabase
-          .from('products')
-          .select('id, name, sku, quantity_on_hand, low_stock_threshold')
-          .eq('organization_id', profileData.organization_id)
-          .order('name', { ascending: true })
+        const [settingsResult, productsResult] = await Promise.all([
+          supabase
+            .from('organization_settings')
+            .select('default_low_stock_threshold')
+            .eq('organization_id', profileData.organization_id)
+            .maybeSingle(),
+          supabase
+            .from('products')
+            .select('id, name, sku, quantity_on_hand, low_stock_threshold')
+            .eq('organization_id', profileData.organization_id)
+            .order('name', { ascending: true }),
+        ])
 
         if (!active) return
-        if (productsError) {
-          setError(`Unable to load inventory: ${productsError.message}`)
+        if (settingsResult.error) {
+          setError(`Unable to load inventory settings: ${settingsResult.error.message}`)
+          return
+        }
+        if (productsResult.error) {
+          setError(`Unable to load inventory: ${productsResult.error.message}`)
           return
         }
 
-        const productRows = products ?? []
+        const productRows = productsResult.data ?? []
+        const defaultThreshold = settingsResult.data?.default_low_stock_threshold ?? 5
         setInventory({
           totalProducts: productRows.length,
           totalStockQuantity: productRows.reduce(
@@ -85,8 +98,11 @@ export default function Dashboard() {
             0
           ),
           lowStockItems: productRows.filter(
-            (product) => product.quantity_on_hand <= (product.low_stock_threshold ?? 5)
+            (product) => product.quantity_on_hand <= (
+              product.low_stock_threshold ?? defaultThreshold
+            )
           ),
+          defaultThreshold,
         })
       } catch (loadError) {
         if (active) {
@@ -200,7 +216,7 @@ export default function Dashboard() {
                           {product.quantity_on_hand.toLocaleString()}
                         </td>
                         <td className="px-5 py-3.5 text-neutral-600">
-                          {product.low_stock_threshold ?? 5}
+                          {product.low_stock_threshold ?? inventory.defaultThreshold}
                         </td>
                       </tr>
                     ))}
