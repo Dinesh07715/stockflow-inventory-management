@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { AlertCircle, Building2, Loader2, Lock, Mail } from 'lucide-react'
+import { CircleAlert as AlertCircle, Building2, Loader as Loader2, Lock, Mail } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { AuthCard, FormField } from './Login'
 

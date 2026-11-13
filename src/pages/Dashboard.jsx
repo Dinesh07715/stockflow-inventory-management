@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Boxes, Building2, Calendar, Loader2 } from 'lucide-react'
+import { Boxes, Building2, Calendar, Loader as Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 

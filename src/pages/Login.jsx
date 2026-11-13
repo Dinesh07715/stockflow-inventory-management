@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Boxes, AlertCircle, Loader2, Lock, Mail } from 'lucide-react'
+import { Boxes, CircleAlert as AlertCircle, Loader as Loader2, Lock, Mail } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 
 export default function Login() {
