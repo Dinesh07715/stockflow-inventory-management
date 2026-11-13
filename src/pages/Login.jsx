@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Boxes, CircleAlert as AlertCircle, Loader as Loader2, Lock, Mail } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import { ensureOrganization } from '../lib/organizationSetup'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -28,17 +29,24 @@ export default function Login() {
 
     setLoading(true)
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+    const { data: authData, error: signInError } =
+      await supabase.auth.signInWithPassword({ email, password })
 
     if (signInError) {
       setError(signInError.message === 'Invalid login credentials'
-        ? 'Invalid email or password.'
-        : 'Unable to sign in right now. Please try again.')
+        ? 'Invalid email or password. If you just signed up, confirm your email first.'
+        : signInError.message)
       setLoading(false)
       return
     }
 
-    navigate('/dashboard')
+    try {
+      await ensureOrganization(authData.user)
+      navigate('/dashboard')
+    } catch (setupError) {
+      setError(setupError.message || 'Unable to finish organization setup. Please try again.')
+      setLoading(false)
+    }
   }
 
   return (

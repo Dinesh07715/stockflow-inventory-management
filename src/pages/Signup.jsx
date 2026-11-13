@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { CircleAlert as AlertCircle, Building2, Loader as Loader2, Lock, Mail } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import { ensureOrganization } from '../lib/organizationSetup'
 import { AuthCard, FormField } from './Login'
 
 export default function Signup() {
@@ -49,47 +50,39 @@ export default function Signup() {
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: {
+          organization_name: orgName.trim(),
+        },
+      },
     })
 
     if (signUpError) {
       setError(
         signUpError.message.includes('already')
           ? 'An account with this email already exists.'
-          : 'Unable to create your account right now. Please try again.'
+          : signUpError.message
       )
       setLoading(false)
       return
     }
 
-    const userId = authData?.user?.id
-    if (!userId) {
-      setError('Sign-up succeeded but session could not be established. Please log in.')
+    // With email confirmation enabled, Supabase creates the user
+    // but does not establish a session until the email is verified.
+    if (!authData?.session) {
+      setError('Account created! Please check your email, confirm your address, then sign in to finish setting up your organization.')
       setLoading(false)
       return
     }
 
-    const organizationId = crypto.randomUUID()
-    const { error: orgError } = await supabase
-      .from('organizations')
-      .insert({ id: organizationId, name: orgName.trim() })
-
-    if (orgError) {
-      setError('Account created, but we could not create your organization. Please contact support.')
+    try {
+      await ensureOrganization(authData.user)
+      navigate('/dashboard')
+    } catch (setupError) {
+      setError(setupError.message || 'Account created, but organization setup could not be completed. Please sign in and retry.')
       setLoading(false)
-      return
     }
-
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({ id: userId, organization_id: organizationId })
-
-    if (profileError) {
-      setError('Organization created, but we could not link your profile. Please contact support.')
-      setLoading(false)
-      return
-    }
-
-    navigate('/dashboard')
   }
 
   return (
