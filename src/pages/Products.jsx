@@ -24,6 +24,7 @@ const emptyForm = {
 }
 
 const DEFAULT_LOW_STOCK_THRESHOLD = 5
+const MAX_INTEGER = 2147483647
 
 function getProductError(error) {
   if (error.code === '23505') {
@@ -32,7 +33,10 @@ function getProductError(error) {
   if (error.code === '23514') {
     return 'Check the product values: quantities and prices must be valid and non-negative.'
   }
-  return error.message || 'Something went wrong while saving the product.'
+  if (error.code === '22003') {
+    return 'One or more numeric values exceed the supported range.'
+  }
+  return 'Unable to save the product. Please review the values and try again.'
 }
 
 function toProductValues(form) {
@@ -45,8 +49,8 @@ function toProductValues(form) {
     return { error: 'Quantity must be a whole number greater than or equal to zero.' }
   }
   const quantity = Number(form.quantity_on_hand)
-  if (!Number.isSafeInteger(quantity)) {
-    return { error: 'Quantity is too large.' }
+  if (!Number.isSafeInteger(quantity) || quantity > MAX_INTEGER) {
+    return { error: 'Quantity exceeds the supported whole-number range.' }
   }
 
   const thresholdText = form.low_stock_threshold.trim()
@@ -54,8 +58,8 @@ function toProductValues(form) {
     return { error: 'Low stock threshold must be a whole number greater than or equal to zero.' }
   }
   const threshold = thresholdText ? Number(thresholdText) : null
-  if (threshold !== null && !Number.isSafeInteger(threshold)) {
-    return { error: 'Low stock threshold is too large.' }
+  if (threshold !== null && (!Number.isSafeInteger(threshold) || threshold > MAX_INTEGER)) {
+    return { error: 'Low stock threshold exceeds the supported whole-number range.' }
   }
 
   const parsePrice = (value, label) => {
@@ -141,7 +145,7 @@ export default function Products() {
 
       if (!active) return
       if (profileError) {
-        setLoadError(`Unable to load your organization profile: ${profileError.message}`)
+        setLoadError('Unable to load your organization profile. Please reload the page.')
         setLoading(false)
         return
       }
@@ -168,14 +172,14 @@ export default function Products() {
       if (!active) return
       const errors = []
       if (settingsResult.error) {
-        errors.push(`Unable to load inventory settings: ${settingsResult.error.message}`)
+        errors.push('Unable to load inventory settings. Please reload the page.')
       } else {
         setDefaultThreshold(
           settingsResult.data?.default_low_stock_threshold ?? DEFAULT_LOW_STOCK_THRESHOLD
         )
       }
       if (productsResult.error) {
-        errors.push(`Unable to load products: ${productsResult.error.message}`)
+        errors.push('Unable to load products. Please reload the page.')
       } else {
         setProducts(productsResult.data ?? [])
       }
@@ -223,6 +227,7 @@ export default function Products() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    if (saving) return
     setFormError('')
     setMessage('')
 
@@ -273,6 +278,7 @@ export default function Products() {
   }
 
   const handleDelete = async (product) => {
+    if (deletingId) return
     const confirmed = window.confirm(`Delete "${product.name}"? This action cannot be undone.`)
     if (!confirmed) return
 
@@ -289,7 +295,7 @@ export default function Products() {
 
     setDeletingId(null)
     if (error) {
-      setLoadError(`Unable to delete product: ${error.message}`)
+      setLoadError('Unable to delete the product. Please try again.')
       return
     }
     if (!data) {
@@ -432,7 +438,7 @@ export default function Products() {
                           <button
                             type="button"
                             onClick={() => handleDelete(product)}
-                            disabled={deletingId === product.id}
+                            disabled={deletingId !== null}
                             aria-label={`Delete ${product.name}`}
                             className="rounded-md p-2 text-neutral-500 hover:bg-error-50 hover:text-error-700 disabled:opacity-50"
                           >
@@ -511,6 +517,7 @@ export default function Products() {
                     required
                     type="number"
                     min="0"
+                    max={MAX_INTEGER}
                     step="1"
                     value={form.quantity_on_hand}
                     onChange={(event) => setForm({ ...form, quantity_on_hand: event.target.value })}
@@ -524,6 +531,7 @@ export default function Products() {
                   <input
                     type="number"
                     min="0"
+                    max={MAX_INTEGER}
                     step="1"
                     value={form.low_stock_threshold}
                     onChange={(event) => setForm({ ...form, low_stock_threshold: event.target.value })}

@@ -15,6 +15,7 @@ export default function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (loading) return
     setError('')
 
     if (!email || !password || !confirmPassword || !orgName) {
@@ -54,7 +55,7 @@ export default function Signup() {
       setError(
         signUpError.message.includes('already')
           ? 'An account with this email already exists.'
-          : signUpError.message
+          : 'Unable to create your account right now. Please try again.'
       )
       setLoading(false)
       return
@@ -106,7 +107,7 @@ export default function Signup() {
     >
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         {error && (
-          <div className="flex items-center gap-2 rounded-lg bg-error-50 border border-error-200 px-4 py-3 text-sm text-error-700">
+          <div role="alert" className="flex items-center gap-2 rounded-lg bg-error-50 border border-error-200 px-4 py-3 text-sm text-error-700">
             <AlertCircle className="h-4 w-4 flex-shrink-0" />
             <span>{error}</span>
           </div>

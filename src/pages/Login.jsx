@@ -12,6 +12,7 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (loading) return
     setError('')
 
     if (!email || !password) {
@@ -32,7 +33,7 @@ export default function Login() {
     if (signInError) {
       setError(signInError.message === 'Invalid login credentials'
         ? 'Invalid email or password.'
-        : signInError.message)
+        : 'Unable to sign in right now. Please try again.')
       setLoading(false)
       return
     }
@@ -55,7 +56,7 @@ export default function Login() {
     >
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         {error && (
-          <div className="flex items-center gap-2 rounded-lg bg-error-50 border border-error-200 px-4 py-3 text-sm text-error-700">
+          <div role="alert" className="flex items-center gap-2 rounded-lg bg-error-50 border border-error-200 px-4 py-3 text-sm text-error-700">
             <AlertCircle className="h-4 w-4 flex-shrink-0" />
             <span>{error}</span>
           </div>
@@ -118,15 +119,21 @@ export function AuthCard({ title, subtitle, children, footer }) {
 }
 
 export function FormField({ label, type, value, onChange, placeholder, icon: Icon, autoComplete }) {
+  const inputId = label.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-neutral-700">{label}</label>
+      <label htmlFor={inputId} className="mb-1.5 block text-sm font-medium text-neutral-700">
+        {label}
+      </label>
       <div className="relative">
         {Icon && (
           <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
         )}
         <input
+          id={inputId}
           type={type}
+          required
           value={value}
           onChange={onChange}
           placeholder={placeholder}

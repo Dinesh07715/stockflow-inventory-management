@@ -31,46 +31,47 @@ export default function Settings() {
       setOrganizationId(null)
       setThreshold(String(DEFAULT_THRESHOLD))
 
-      if (!user?.id) {
-        setError('Your session could not be verified. Please sign in again.')
-        setLoading(false)
-        return
+      try {
+        if (!user?.id) {
+          setError('Your session could not be verified. Please sign in again.')
+          return
+        }
+
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('organization_id')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (!active) return
+        if (profileError) {
+          setError('Unable to load your organization profile. Please reload the page.')
+          return
+        }
+        if (!profile?.organization_id) {
+          setError('Your account is not linked to an organization. Please contact support.')
+          return
+        }
+
+        const { data: settings, error: settingsError } = await supabase
+          .from('organization_settings')
+          .select('default_low_stock_threshold')
+          .eq('organization_id', profile.organization_id)
+          .maybeSingle()
+
+        if (!active) return
+        if (settingsError) {
+          setError('Unable to load inventory settings. Please reload the page.')
+          return
+        }
+
+        setOrganizationId(profile.organization_id)
+        setThreshold(String(settings?.default_low_stock_threshold ?? DEFAULT_THRESHOLD))
+      } catch {
+        if (active) setError('Unable to load inventory settings. Please reload the page.')
+      } finally {
+        if (active) setLoading(false)
       }
-
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('organization_id')
-        .eq('id', user.id)
-        .maybeSingle()
-
-      if (!active) return
-      if (profileError) {
-        setError(`Unable to load your organization profile: ${profileError.message}`)
-        setLoading(false)
-        return
-      }
-      if (!profile?.organization_id) {
-        setError('Your account is not linked to an organization. Please contact support.')
-        setLoading(false)
-        return
-      }
-
-      const { data: settings, error: settingsError } = await supabase
-        .from('organization_settings')
-        .select('default_low_stock_threshold')
-        .eq('organization_id', profile.organization_id)
-        .maybeSingle()
-
-      if (!active) return
-      if (settingsError) {
-        setError(`Unable to load inventory settings: ${settingsError.message}`)
-        setLoading(false)
-        return
-      }
-
-      setOrganizationId(profile.organization_id)
-      setThreshold(String(settings?.default_low_stock_threshold ?? DEFAULT_THRESHOLD))
-      setLoading(false)
     }
 
     loadSettings()
@@ -81,6 +82,7 @@ export default function Settings() {
 
   const handleSave = async (event) => {
     event.preventDefault()
+    if (saving) return
     setError('')
     setMessage('')
 
@@ -99,22 +101,27 @@ export default function Settings() {
     }
 
     setSaving(true)
-    const { error: saveError } = await supabase
-      .from('organization_settings')
-      .upsert(
-        {
-          organization_id: organizationId,
-          default_low_stock_threshold: thresholdValue,
-        },
-        { onConflict: 'organization_id' }
-      )
-    setSaving(false)
+    try {
+      const { error: saveError } = await supabase
+        .from('organization_settings')
+        .upsert(
+          {
+            organization_id: organizationId,
+            default_low_stock_threshold: thresholdValue,
+          },
+          { onConflict: 'organization_id' }
+        )
 
-    if (saveError) {
-      setError(`Unable to save inventory settings: ${saveError.message}`)
-      return
+      if (saveError) {
+        setError('Unable to save inventory settings. Please try again.')
+        return
+      }
+      setMessage('Inventory settings saved successfully.')
+    } catch {
+      setError('Unable to save inventory settings. Please try again.')
+    } finally {
+      setSaving(false)
     }
-    setMessage('Inventory settings saved successfully.')
   }
 
   if (loading) {

@@ -55,7 +55,7 @@ export default function Dashboard() {
 
         if (!active) return
         if (profileError) {
-          setError(`Unable to load your organization profile: ${profileError.message}`)
+          setError('Unable to load your organization profile. Please retry.')
           return
         }
         if (!profileData?.organization_id) {
@@ -81,11 +81,11 @@ export default function Dashboard() {
 
         if (!active) return
         if (settingsResult.error) {
-          setError(`Unable to load inventory settings: ${settingsResult.error.message}`)
+          setError('Unable to load inventory settings. Please retry.')
           return
         }
         if (productsResult.error) {
-          setError(`Unable to load inventory: ${productsResult.error.message}`)
+          setError('Unable to load inventory. Please retry.')
           return
         }
 
@@ -104,13 +104,9 @@ export default function Dashboard() {
           ),
           defaultThreshold,
         })
-      } catch (loadError) {
+      } catch {
         if (active) {
-          setError(
-            `Unable to load dashboard: ${
-              loadError instanceof Error ? loadError.message : 'Please try again.'
-            }`
-          )
+          setError('Unable to load the dashboard. Please retry.')
         }
       } finally {
         if (active) setLoading(false)
