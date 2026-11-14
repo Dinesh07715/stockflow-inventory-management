@@ -11,7 +11,7 @@ The application uses React and Vite for the frontend, Supabase for authenticatio
 ## 🌐 Project Links
 
 - **GitHub Repository:** https://github.com/Dinesh07715/stockflow-inventory-management
-- **Live Application:** Add your Netlify deployment URL here.
+- **Live Application: https://stockflowinventory-management.netlify.app/login.
 
 ---
 
